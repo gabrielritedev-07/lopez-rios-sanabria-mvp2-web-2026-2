@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Punto de venta Papel y Luna" /><title>Papel y Luna | POS</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <a class="brand" href="#venta"><img src="assets/logo-papel-y-luna.png" alt=""/><span><strong>Papel y Luna</strong><small>papelería y miscelánea</small></span></a>
+      <nav aria-label="Módulos">
+        <button class="nav-link is-active" data-page="venta">Punto de venta</button><button class="nav-link" data-page="ventas">Ventas</button>
+        <button class="nav-link" data-page="productos">Productos</button><button class="nav-link" data-page="compras">Compras</button>
+        <button class="nav-link" data-page="entidades">Entidades</button>
+      </nav><p class="sidebar__note">MVP 2<br/><span>Datos sincronizados con Google Sheets.</span></p>
+    </aside>
+    <main class="main-content"><div id="status" role="status" aria-live="polite" aria-busy="false" hidden><span id="loading-spinner" class="loading-spinner" aria-hidden="true" hidden></span><span id="status-message"></span></div>
+      <section id="page-venta" class="view is-active">
+        <header class="page-heading"><div><p class="eyebrow">Punto de venta</p><h1>Nueva venta</h1><p>Busca artículos, guarda ventas abiertas y retómalas cuando quieras.</p></div><button id="new-sale" class="button button--secondary">Nueva venta</button></header>
+        <div class="sale-workspace"><section class="catalog panel"><div class="section-heading"><h2>Catálogo</h2><span id="product-count" class="count-badge"></span></div><label class="search-box"><span>⌕</span><input id="sale-search" type="search" placeholder="Buscar producto…"/></label><div id="category-filters" class="category-filters"></div><div id="product-grid" class="product-grid"></div></section>
+          <aside class="cart panel"><div class="section-heading"><div><h2 id="cart-title">Venta actual</h2><small id="sale-id" class="sale-id"></small></div><span id="cart-count" class="count-badge">0 artículos</span></div><div class="sale-customer"><div class="sale-customer__controls"><label for="sale-client">Cliente de la venta (opcional)<select id="sale-client"><option value="">Venta de mostrador — sin cliente asociado</option></select></label><button id="new-sale-client" class="button button--secondary" type="button">+ Agregar cliente</button></div><p id="client-summary" class="input-note">Venta de mostrador: no se asocia a una persona. Selecciona un cliente si necesitas identificarla; para pago Debe es obligatorio.</p></div><div id="cart-lines" class="cart-lines"></div><div id="cart-empty" class="empty-state"><h3>Agrega productos desde el catálogo.</h3></div><div class="summary"><div><span>Subtotal</span><strong id="sale-subtotal">$0</strong></div><div class="summary__total"><span>Total con IVA</span><strong id="sale-total">$0</strong></div></div><div class="payment-section"><label>Método de pago<select id="payment-method"><option>Efectivo</option><option>Nequi</option><option>Debe</option></select></label><div id="cash-fields"><label>Valor recibido<input id="cash-received" type="number" min="0" inputmode="numeric"/></label><p id="change-note" class="input-note"></p></div><p id="sale-error" class="form-error" role="alert"></p></div><div class="cart-actions"><button id="save-open" class="button button--secondary">Guardar abierta</button><button id="close-sale" class="button button--primary" disabled>Cerrar venta</button></div></aside>
+        </div>
+      </section>
+      <section id="page-ventas" class="view"><header class="page-heading"><div><p class="eyebrow">Registro</p><h1>Ventas</h1><p>Retoma ventas abiertas o consulta ventas cerradas.</p></div></header><div id="sales-list" class="panel sales-history"></div></section>
+      <section id="page-productos" class="view"><header class="page-heading"><div><p class="eyebrow">Catálogo e inventario</p><h1>Productos</h1><p>Administra los productos y sus existencias.</p></div><button id="new-product" class="button button--primary">+ Producto</button></header><section class="panel"><label class="search-box"><span>⌕</span><input id="product-search" placeholder="Buscar producto…"/></label><div class="table-wrap"><table><thead><tr><th>Producto</th><th>Categoría</th><th>Costo</th><th>Precio</th><th>Inventario</th><th></th></tr></thead><tbody id="products-table"></tbody></table></div></section></section>
+      <section id="page-compras" class="view"><header class="page-heading"><div><p class="eyebrow">Abastecimiento</p><h1>Compras</h1><p>Registra compras a proveedores y actualiza existencias.</p></div><button id="new-purchase" class="button button--primary">+ Registrar compra</button></header><div id="purchases-list" class="panel sales-history"></div></section>
+      <section id="page-entidades" class="view"><header class="page-heading"><div><p class="eyebrow">Relaciones del negocio</p><h1>Entidades</h1><p>Administra categorías, proveedores y clientes.</p></div></header><div class="entity-tabs"><button data-entity="categorias" class="is-selected">Categorías</button><button data-entity="proveedores">Proveedores</button><button data-entity="clientes">Clientes</button></div><section class="panel"><div class="section-heading"><label class="search-box"><span>⌕</span><input id="entity-search" placeholder="Buscar…"/></label><button id="new-entity" class="button button--primary">+ Crear</button></div><div id="entity-list"></div></section></section>
+      <section id="page-comprobante" class="view"><header class="page-heading"><div><p class="eyebrow">Venta cerrada</p><h1>Comprobante</h1></div><button class="button button--secondary" data-page="ventas">Volver</button></header><article id="receipt" class="receipt panel"></article></section>
+    </main>
+  </div>
+  <dialog id="record-dialog" class="dialog"><form id="record-form" novalidate><div class="dialog__heading"><div><p class="eyebrow" id="dialog-kicker">Registro</p><h2 id="dialog-title"></h2><p id="record-id-note" class="record-id-note"></p></div><button type="button" class="icon-button" data-close>×</button></div><div id="dialog-fields" class="form-grid"></div><p id="dialog-error" class="form-error" role="alert"></p><div class="dialog__actions"><button type="button" class="button button--secondary" data-close>Cancelar</button><button id="dialog-save" class="button button--primary">Guardar</button></div></form></dialog>
+  <template id="product-template"><article class="product-card"><div class="product-card__image"><img alt=""/></div><div class="product-card__body"><p class="product-card__category"></p><h3></h3><p class="product-card__description"></p><div class="product-card__footer"><strong></strong><button class="add-product" type="button">Agregar</button><button class="edit-sale-product" type="button" title="Editar producto">Editar</button></div></div></article></template>
+  <script>
+    if (location.protocol === "file:") {
+      document.addEventListener("DOMContentLoaded", function () {
+        var aviso = document.createElement("aside");
+        aviso.className = "file-protocol-warning";
+        aviso.setAttribute("role", "alert");
+        aviso.innerHTML = "<strong>Abierto como archivo local.</strong> Chrome bloquea el JavaScript de esta app en file:// y por eso los botones no responden. Iníciala desde VS Code con <code>py -m http.server 5500</code> y abre <code>http://localhost:5500</code>, o publícala con GitHub Pages.";
+        document.body.prepend(aviso);
+      });
+    }
+  </script>
+  <script type="module" src="js/app.js"></script>
+</body></html>
+
