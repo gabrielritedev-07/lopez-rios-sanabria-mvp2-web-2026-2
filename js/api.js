@@ -1,6 +1,6 @@
 // Único punto de acceso al servicio Google Apps Script.
 // Pega aquí la URL de implementación terminada en /exec.
-export const API_URL = "https://script.google.com/macros/s/AKfycbyG6CKLkOMADxf083w90l96ILGwRYrunbddZUm4avcCIPi8tQrQPIklGzRxn0mv2PDn/exec";
+export const API_URL = "https://script.google.com/macros/s/AKfycbwFFo3v-99dlZnnX1DCnKQRptBvtIH7ALxcNujmk8GLu31rVTz4EeeUaCYfvY0G6e0/exec";
 
 export async function solicitar(resource, { method = "GET", action, data } = {}) {
   if (!API_URL.startsWith("https://script.google.com/macros/s/")) {
