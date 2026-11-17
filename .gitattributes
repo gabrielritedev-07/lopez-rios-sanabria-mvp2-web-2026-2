@@ -1,2 +1,4 @@
-# Los scripts de shell deben conservar saltos de línea LF para ejecutarse en Render (Linux).
+# Normaliza los saltos de línea de los archivos de texto.
+* text=auto
+# Los scripts de shell deben conservar LF para ejecutarse en Render (Linux).
 *.sh text eol=lf

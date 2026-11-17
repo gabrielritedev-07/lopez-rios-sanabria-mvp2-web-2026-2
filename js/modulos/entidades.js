@@ -22,8 +22,12 @@ const avisarClientes = () => alCambiarClientes.forEach((cb) => cb());
 
 function render() {
   const texto = $("#entity-search").value.trim().toLowerCase();
+  // Sin permiso (cajero en categorías o proveedores) los botones se ven con candado:
+  // si los usa, el backend rechaza la acción con 403 y se muestra el mensaje.
   const gestionar = puedeGestionar();
-  $("#new-entity").hidden = !gestionar;
+  const candado = gestionar ? "" : ` title="Solo el administrador puede modificar ${TEXTOS[entidad].plural.toLowerCase()}"`;
+  $("#new-entity").classList.toggle("is-locked", !gestionar);
+  $("#new-entity").title = gestionar ? "" : `Solo el administrador puede crear ${TEXTOS[entidad].plural.toLowerCase()}`;
   $("#new-entity").textContent = TEXTOS[entidad].boton;
   const registros = estado[entidad].filter((x) =>
     `${x.nombre} ${x.telefono || ""} ${x.correo || ""}`.toLowerCase().includes(texto),
@@ -33,11 +37,9 @@ function render() {
       .map(
         (x) => `<article class="sale-record">
           <div><h2>${esc(x.nombre)}</h2><p>${esc([x.telefono, x.correo].filter(Boolean).join(" · ") || (entidad === "categorias" ? `ID ${x.id}` : "Sin datos de contacto"))}</p></div>
-          <div class="sale-record__actions">${
-            gestionar
-              ? `<button class="button button--secondary" type="button" data-entity-edit="${x.id}">Editar</button><button class="button button--danger" type="button" data-entity-delete="${x.id}">Eliminar</button>`
-              : '<span class="tag tag--muted">Solo consulta</span>'
-          }</div>
+          <div class="sale-record__actions${gestionar ? "" : " is-locked"}"${candado}>${
+            gestionar ? "" : '<span class="tag tag--muted">Solo administrador</span>'
+          }<button class="button button--secondary" type="button" data-entity-edit="${x.id}">Editar</button><button class="button button--danger" type="button" data-entity-delete="${x.id}">Eliminar</button></div>
         </article>`,
       )
       .join("") || '<p class="empty-list">No hay registros.</p>';

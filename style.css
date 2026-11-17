@@ -1022,3 +1022,10 @@ select,
   .sidebar__user { gap:8px; }
   .sidebar__user > div { min-width:0; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 }
+
+/* Acciones sin permiso para el rol actual: visibles con candado; el backend las rechaza (403). */
+.is-locked button,
+button.is-locked { opacity:.55; }
+.is-locked button::before,
+button.is-locked::before { content:"🔒 "; font-size:.85em; }
+.is-locked .tag { opacity:1; }

@@ -1,15 +1,15 @@
-# Sube el proyecto al repositorio del equipo en GitHub, conservando el historial del MVP 2.
+﻿# Sube el proyecto al repositorio del equipo en GitHub.
 # Uso (desde la carpeta del proyecto):
 #   powershell -ExecutionPolicy Bypass -File .\subir-a-github.ps1
 #
-# Qué hace:
-# 1. Si la carpeta aún no es un repositorio Git, la conecta con el repositorio existente
-#    sin modificar ningún archivo local.
-# 2. Prepara todos los cambios y verifica que NO se suban secretos ni entornos virtuales.
-# 3. Verifica que estén las migraciones que Render necesita.
-# 4. Hace el commit y el push a la rama main.
+# Sirve para la primera subida y para todas las siguientes. Qué hace:
+# 1. Conecta la carpeta con el repositorio (si estaba conectada a otro, cambia el remoto).
+# 2. La primera vez toma el historial que ya tenga el repositorio en GitHub, sin tocar tus archivos.
+# 3. Prepara los cambios y verifica que NO se suban secretos, entornos virtuales ni bases locales.
+# 4. Verifica que estén las migraciones que Render necesita.
+# 5. Hace commit, integra lo que hayan subido tus compañeros y hace push a main.
 
-$repo = "https://github.com/gabrielritedev-07/lopez-rios-sanabria-mvp2-web-2026-2.git"
+$repo = "https://github.com/claudiosgproyectos-max/lopez-rios-sanabria-mvp2-web-2026-2.git"
 Set-Location $PSScriptRoot
 
 function Fallar($mensaje) {
@@ -28,35 +28,53 @@ function Ejecutar($descripcion, [scriptblock]$comando) {
 git --version | Out-Null
 if ($LASTEXITCODE -ne 0) { Fallar "Git no está instalado. Descárgalo de https://git-scm.com y vuelve a ejecutar." }
 if (-not (git config user.email)) {
-    $nombre = Read-Host "Tu nombre para los commits (ej. Gabriel Ríos)"
+    $nombre = Read-Host "Tu nombre para los commits (ej. Claudio Sanabria)"
     $correo = Read-Host "El correo de tu cuenta de GitHub"
     git config --global user.name $nombre
     git config --global user.email $correo
 }
 Write-Host "Commits a nombre de: $(git config user.name) <$(git config user.email)>"
 
-# 1. Conectar con el repositorio existente (solo la primera vez)
+# 1. Conectar con el repositorio
 if (-not (Test-Path ".git")) {
     Ejecutar "Inicializando repositorio local" { git init -b main }
+}
+$remotoActual = git remote get-url origin 2>$null
+if (-not $remotoActual) {
     Ejecutar "Agregando el repositorio de GitHub" { git remote add origin $repo }
-    Ejecutar "Descargando el historial del MVP 2" { git fetch origin }
-    Ejecutar "Tomando el historial (tus archivos no cambian)" { git reset origin/main }
-    Ejecutar "Siguiendo la rama main de GitHub" { git branch --set-upstream-to=origin/main main }
+} elseif ($remotoActual -ne $repo) {
+    Write-Host "La carpeta apuntaba a: $remotoActual" -ForegroundColor Yellow
+    Ejecutar "Cambiando al repositorio nuevo" { git remote set-url origin $repo }
 }
 
-# 2. Preparar cambios y bloquear archivos privados
+Ejecutar "Consultando el repositorio en GitHub (puede pedir iniciar sesión)" { git fetch origin }
+$hayMainRemoto = [bool](git ls-remote --heads origin main)
+
+# 2. Primera vez con este repositorio: tomar su historial sin modificar los archivos locales
+if ($hayMainRemoto) {
+    git rev-parse --verify --quiet HEAD *> $null
+    $tieneCommits = ($LASTEXITCODE -eq 0)
+    $base = $null
+    if ($tieneCommits) { $base = git merge-base HEAD origin/main 2>$null }
+    if (-not $base) {
+        Ejecutar "Tomando el historial de GitHub (tus archivos no cambian)" { git reset origin/main }
+    }
+}
+git branch -M main 2>$null
+
+# 3. Preparar cambios y bloquear archivos privados o pesados
 Ejecutar "Preparando cambios" { git add -A }
 $preparados = @(git diff --cached --name-only)
 $privados = $preparados | Where-Object {
-    $_ -match '(^|/)\.env$' -or $_ -match '^backend/env/' -or $_ -match '^\.venv/' -or
-    $_ -match '__pycache__' -or $_ -match '\.sqlite3$'
+    $_ -match '(^|/)\.env$' -or $_ -match '^backend/env/' -or $_ -match '^\.venv' -or
+    $_ -match '__pycache__' -or $_ -match '\.sqlite3$' -or $_ -match '^lopez-rios-sanabria-mvp2-web-2026-2'
 }
 if ($privados) {
     git reset | Out-Null
     Fallar "Se iban a subir archivos privados o pesados:`n$($privados -join "`n")`nRevisa el .gitignore antes de continuar."
 }
 
-# 3. Migraciones necesarias en Render
+# 4. Migraciones necesarias en Render
 $requeridas = @(
     "backend/apps/caja/migrations/0001_initial.py",
     "backend/apps/catalogo/migrations/0002_*.py",
@@ -69,28 +87,33 @@ foreach ($patron in $requeridas) {
     }
 }
 
-if ($preparados.Count -eq 0) {
-    Write-Host "No hay cambios nuevos para subir." -ForegroundColor Yellow
-    exit 0
+# 5. Commit, integrar cambios de compañeros y push
+if ($preparados.Count -gt 0) {
+    Write-Host ""
+    Write-Host "Archivos que se van a subir: $($preparados.Count)" -ForegroundColor Green
+    git status --short | Select-Object -First 40
+    if ($preparados.Count -gt 40) { Write-Host "... y $($preparados.Count - 40) más" }
+    Write-Host ""
+    $mensaje = Read-Host "Mensaje del commit (Enter = 'MVP 3: backend Django + PostgreSQL y frontend con JWT')"
+    if (-not $mensaje) { $mensaje = "MVP 3: backend Django + PostgreSQL y frontend con JWT" }
+    $confirmar = Read-Host "¿Subir a GitHub ahora? (s/n)"
+    if ($confirmar -notin @("s", "S", "si", "sí", "SI")) {
+        Write-Host "Cancelado. Los cambios quedaron preparados (git add) pero no se subió nada."
+        exit 0
+    }
+    Ejecutar "Creando commit" { git commit -m $mensaje }
+} else {
+    Write-Host "No hay archivos nuevos; se revisará si quedó algo pendiente por subir." -ForegroundColor Yellow
 }
 
-Write-Host ""
-Write-Host "Archivos que se van a subir: $($preparados.Count)" -ForegroundColor Green
-git status --short | Select-Object -First 40
-if ($preparados.Count -gt 40) { Write-Host "... y $($preparados.Count - 40) más" }
-Write-Host ""
-
-$mensaje = Read-Host "Mensaje del commit (Enter = 'MVP 3: backend Django + PostgreSQL y frontend con JWT')"
-if (-not $mensaje) { $mensaje = "MVP 3: backend Django + PostgreSQL y frontend con JWT" }
-
-$confirmar = Read-Host "¿Subir a GitHub ahora? (s/n)"
-if ($confirmar -notin @("s", "S", "si", "sí", "SI")) {
-    Write-Host "Cancelado. Los cambios quedaron preparados (git add) pero no se subió nada."
-    exit 0
+if ($hayMainRemoto) {
+    Write-Host "-> Integrando lo que hayan subido tus compañeros" -ForegroundColor Cyan
+    git pull --rebase origin main
+    if ($LASTEXITCODE -ne 0) {
+        Fallar "Hay conflictos con cambios de tus compañeros. Resuélvelos en VS Code (pestaña Control de código fuente), luego ejecuta 'git rebase --continue' y vuelve a correr este script."
+    }
 }
-
-Ejecutar "Creando commit" { git commit -m $mensaje }
-Ejecutar "Subiendo a GitHub (puede abrir el navegador para iniciar sesión)" { git push -u origin main }
+Ejecutar "Subiendo a GitHub" { git push -u origin main }
 
 Write-Host ""
-Write-Host "Listo. Revisa: https://github.com/gabrielritedev-07/lopez-rios-sanabria-mvp2-web-2026-2" -ForegroundColor Green
+Write-Host "Listo. Revisa: https://github.com/claudiosgproyectos-max/lopez-rios-sanabria-mvp2-web-2026-2" -ForegroundColor Green

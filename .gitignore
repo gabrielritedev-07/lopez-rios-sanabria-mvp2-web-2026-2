@@ -1,8 +1,11 @@
-# Entornos virtuales
-.venv/
+# Entornos virtuales (incluye .venv-1, .venv-2…)
+.venv*/
 venv/
 env/
 backend/env/
+
+# Clon del repositorio creado por error dentro del proyecto
+/lopez-rios-sanabria-mvp2-web-2026-2/
 
 # Python
 __pycache__/

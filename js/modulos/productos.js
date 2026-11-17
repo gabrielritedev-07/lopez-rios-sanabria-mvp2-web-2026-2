@@ -1,4 +1,6 @@
 // Productos: consulta para ambos roles; crear, editar y eliminar solo administrador.
+// Al cajero se le muestran las acciones con candado: si las intenta, la petición llega al
+// backend y este la rechaza (403). Así se ve que el bloqueo lo hace el servidor.
 import { api } from "../api.js";
 import { cargar, estado, porId, reemplazar } from "../estado.js";
 import { esAdmin } from "../sesion.js";
@@ -15,13 +17,15 @@ function render() {
         (p) => `<tr>
           <td><strong>${esc(p.nombre)}</strong><small>${esc(p.codigo || "Sin código")}</small></td>
           <td>${esc(p.categoriaNombre)}</td>
-          <td>${pesos(p.costo)}</td>
+          ${esAdmin() ? `<td>${pesos(p.costo)}</td>` : ""}
           <td>${pesos(p.precio)}</td>
           <td>${p.seguimientoInventario ? `${p.stock} unidades` : "No aplica"}</td>
-          <td>${esAdmin() ? `<div class="table-actions"><button type="button" data-product-edit="${p.id}">Editar</button><button type="button" data-product-delete="${p.id}" class="text-danger">Eliminar</button></div>` : ""}</td>
+          <td><div class="table-actions${esAdmin() ? "" : " is-locked"}" title="${esAdmin() ? "" : "Solo el administrador puede modificar productos"}"><button type="button" data-product-edit="${p.id}">Editar</button><button type="button" data-product-delete="${p.id}" class="text-danger">Eliminar</button></div></td>
         </tr>`,
       )
-      .join("") || '<tr><td colspan="6" class="table-empty">No hay productos.</td></tr>';
+      .join("") || `<tr><td colspan="${esAdmin() ? 6 : 5}" class="table-empty">No hay productos.</td></tr>`;
+  $("#new-product").classList.toggle("is-locked", !esAdmin());
+  $("#new-product").title = esAdmin() ? "" : "Solo el administrador puede crear productos";
 }
 
 function abrirFormularioProducto(producto = null) {
