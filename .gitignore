@@ -1,0 +1,29 @@
+# Entornos virtuales
+.venv/
+venv/
+env/
+backend/env/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Secretos y configuración local
+.env
+*.env
+!.env.example
+
+# Bases de datos locales y estáticos generados
+*.sqlite3
+backend/staticfiles/
+
+# Dependencias y compilados
+node_modules/
+dist/
+build/
+
+# Editores / sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

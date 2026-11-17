@@ -1,77 +1,299 @@
-# POS Papel y Luna MVP 2
+# POS Papel y Luna — MVP 3 (Entrega final)
 
-Aplicación web de punto de venta en HTML, CSS y JavaScript vanilla. Los productos, ventas, compras, clientes, proveedores y categorías se leen y escriben en Google Sheets mediante una Web App de Google Apps Script. La aplicación no usa `localStorage` como fuente de datos.
+Sistema de punto de venta para la papelería **Papel y Luna**. Desarrollo de Aplicaciones Web, 2026-2.
 
-## Configuración
+| | URL |
+|---|---|
+| **Frontend** | https://gabrielritedev-07.github.io/lopez-rios-sanabria-mvp2-web-2026-2/ |
+| **API (backend)** | `https://NOMBRE-SERVICIO.onrender.com/api/` ← *reemplazar tras crear el servicio en Render* |
+| Comprobación de la API | `https://NOMBRE-SERVICIO.onrender.com/api/salud/` |
+| Repositorio | https://github.com/gabrielritedev-07/lopez-rios-sanabria-mvp2-web-2026-2 |
 
-1. Crea una hoja de cálculo con pestañas `productos`, `ventas`, `compras`, `clientes`, `proveedores` y `categorias`.
-2. Añade a cada pestaña los encabezados que define la Guía Backend Google Sheets – POS MVP 2. Mantén sus nombres y orden exactos. Las relaciones usan ids (`categoriaId`, `clienteId`, `proveedorId`); ventas y compras guardan sus líneas en `itemsJson`.
-3. Publica el script de Apps Script como aplicación web y copia su URL terminada en `/exec`.
-4. Pega esa URL en `API_URL` en `js/api.js`.
-5. Sirve esta carpeta por HTTPS o desde `localhost` (por ejemplo, la extensión Live Server de VS Code). No abras `index.html` como archivo local: el navegador bloquea módulos ES cuando se usa el protocolo `file://`.
+> El backend usa el plan gratuito de Render: tras 15 minutos sin uso se suspende y la primera
+> petición tarda cerca de un minuto en responder. Después funciona con normalidad.
 
-El archivo `apps-script/Code.gs` contiene la implementación de GET y de las operaciones `create`, `update` y `delete`. Copia su contenido al editor de Apps Script, guarda y publica una nueva versión de la aplicación web con acceso para cualquier persona. La guía del curso explica cómo desplegarla.
+## Credenciales de prueba
 
-El contrato esperado del servicio es `GET ?resource=productos` para listar y `POST ?resource=productos` con JSON `{ "action": "create|update|delete", "data": { ... } }` para mutaciones. Las respuestas deben seguir `{ "success": true, "data": ... }` o `{ "success": false, "message": "..." }`. Para POST se envía JSON como `text/plain` para evitar preflight de CORS. Revisa que el despliegue de Apps Script permita acceso desde el navegador.
+| Rol | Usuario | Contraseña |
+|---|---|---|
+| Administrador | `admin` | `Admin.PyL2026` |
+| Cajero | `cajero` | `Cajero.PyL2026` |
 
-## Campos usados por el frontend
+Se crean con `python manage.py crear_usuarios_iniciales` (ver más abajo). Se pueden cambiar con las
+variables `POS_ADMIN_*` y `POS_CAJERO_*` del archivo `.env`.
 
-- **productos:** `id`, `codigo`, `nombre`, `categoriaId`, `precio`, `costo`, `seguimientoInventario`, `stock`.
-- **ventas:** `id`, `fecha`, `estado` (`abierta` o `cerrada`), `clienteId`, `metodoPago` (`Efectivo`, `Nequi` o `Debe`), `subtotal`, `total`, `valorRecibido`, `cambio`, `itemsJson`, `actualizadoEn`.
-- **compras:** `id`, `fecha`, `proveedorId`, `total`, `itemsJson`.
-- **categorias:** `id`, `nombre`.
-- **proveedores / clientes:** `id`, `nombre`, `telefono`, `correo`.
+## Integrantes
 
-Cada línea en `itemsJson` conserva `productoId`, `nombre`, `precio`, `costo` y `cantidad` como fotografía del momento de la operación. Los importes son números en pesos enteros y las fechas se almacenan en ISO 8601.
+- [Nombre completo] López
+- [Nombre completo] Ríos
+- [Nombre completo] Sanabria
 
-## Identificadores y cliente en la venta
+---
 
-Los registros nuevos reciben automáticamente un id legible, con prefijo y consecutivo: `PR-001` para productos, `P-001` para proveedores, `C-001` para clientes, `V-001` para ventas, `CAT-001` para categorías y `CO-001` para compras. El consecutivo se calcula a partir del mayor id existente de ese tipo; los ids anteriores no se cambian para conservar sus relaciones. El POS muestra el id de la venta actual y el formulario muestra el id sugerido antes de guardar.
+## 1. Arquitectura
 
-En el carrito, el cliente es opcional para ventas de mostrador y obligatorio para pago `Debe`. El botón `+ Agregar cliente` permite crear un cliente sin salir de la venta; al guardarlo queda seleccionado automáticamente. También se refresca el selector si se crea un cliente desde el módulo Entidades. Cuando eliges uno existente se muestran su nombre y datos de contacto.
+```text
+Frontend (HTML + CSS + JavaScript Vanilla, módulos ES)      → GitHub Pages
+        │  fetch() con JSON y encabezado Authorization: Bearer <JWT>
+        ▼
+API REST: Django 6.1 + Django REST Framework + SimpleJWT     → Render
+        │  ORM de Django, transacciones atómicas
+        ▼
+PostgreSQL                                                   → Neon
+```
 
-## Migración desde MVP 1
+- El frontend **no guarda datos del negocio**: todo se lee y se escribe en la API. En `sessionStorage`
+  solo viven los tokens de la sesión.
+- El backend es la **fuente confiable de cálculos**: precios, subtotales, descuentos, totales, cambio,
+  reembolsos y stock se calculan en el servidor. Lo que envíe el frontend se valida y se recalcula.
+- Las operaciones que tocan ventas e inventario a la vez (cerrar venta, corregir, reembolsar,
+  registrar compra) corren en `transaction.atomic()` con `select_for_update()`: si algo falla, no
+  quedan datos a medias y dos cajeros no pueden descontar el mismo stock al mismo tiempo.
 
-El navegador ya no toma datos de la persistencia del MVP 1. Carga las entidades desde las pestañas de Google Sheets. Migra manualmente cada producto y venta que se deba conservar; crea primero las categorías y relaciona cada producto con su `categoriaId`. Si un producto antiguo conserva el nombre de la categoría en una columna de texto, el formulario puede asociarlo por coincidencia exacta con una categoría ya cargada. No se crean registros ficticios ni semilla local.
+### Estructura del proyecto
 
-## Módulos incluidos
+```text
+├── index.html              # Única página: login + aplicación
+├── style.css               # Estilos (identidad visual de Papel y Luna, responsive)
+├── assets/                 # Logo e íconos
+├── js/
+│   ├── app.js              # Arranque, login/logout, menú por rol
+│   ├── api.js              # apiClient: fetch, JWT, renovación de token, errores
+│   ├── auth.js / sesion.js # Inicio de sesión y almacenamiento de tokens
+│   ├── config.js           # URL de la API (local / producción)
+│   ├── estado.js           # Copia en memoria de los catálogos
+│   ├── navegacion.js       # Cambio de pantallas
+│   ├── ui.js               # Formato, mensajes y formularios en diálogo
+│   └── modulos/            # Una pantalla por archivo: venta, historial, productos,
+│                           # compras, entidades, descuentos, faltantes, reportes
+├── backend/
+│   ├── config/             # settings, urls, manejo de errores, filtros de fecha
+│   ├── apps/
+│   │   ├── usuarios/       # Perfil y rol, login JWT, permisos, comandos de datos iniciales
+│   │   ├── catalogo/       # Productos, categorías, clientes, proveedores, descuentos, inventario
+│   │   ├── ventas/         # Ventas, detalles, corrección, reembolsos (services.py)
+│   │   ├── compras/        # Compras y detalles (services.py)
+│   │   ├── faltantes/      # Demanda no atendida y normalización de nombres
+│   │   └── reportes/       # Consultas agregadas
+│   ├── API.md              # Contrato completo de la API
+│   ├── requirements.txt
+│   ├── build.sh            # Build en Render
+│   └── .env.example        # Variables de entorno (copiar a .env)
+└── crear-zip.ps1           # Genera el ZIP de entrega
+```
 
-- Catálogo buscable y filtrable, carrito, medios de pago heredados, efectivo y cambio. La app carga primero productos, categorías y clientes; historial, compras y proveedores se consultan al abrir esos módulos, con un indicador circular mientras hay peticiones.
-- Ventas abiertas persistidas, edición, retoma y cierre con asociación opcional de cliente (requerido para `Debe`).
-- Historial, detalle de factura e impresión/guardar como PDF.
-- CRUD de productos y edición de producto directamente desde el catálogo de venta.
-- Compras vinculadas a proveedores y productos; listado y actualización de stock/costo cuando el producto lleva inventario.
-- CRUD de categorías, proveedores y clientes; se impide eliminar entidades con relaciones existentes.
-- Validación de stock antes del cierre; los productos sin seguimiento no alteran stock.
+Cada app separa `models.py` (entidades), `serializers.py` (validación y JSON), `views.py`
+(coordinación HTTP), `urls.py` (rutas), `services.py` (reglas de negocio con transacciones)
+y `tests.py`. Los permisos por rol están en `apps/usuarios/permissions.py`.
 
-## Nota de inventario
+## 2. Funcionalidades
 
-Apps Script ofrece operaciones por registro, no una transacción atómica para actualizar varias hojas. El frontend guarda la venta confirmada y luego actualiza los productos involucrados; mantén el servicio accesible durante el cierre y revisa el estado de las hojas si una petición de inventario falla a mitad de la operación. Para concurrencia real entre varios cajeros, este modelo requiere una capa transaccional, fuera del alcance de MVP 2.
+**Heredadas (MVP 1 y 2), ahora sobre el backend propio:** venta con método de pago (Efectivo, Nequi,
+Debe), valor recibido y cambio; factura imprimible o en PDF; historial; ventas abiertas (guardar,
+retomar y cerrar); edición de un producto desde la venta; CRUD de productos, categorías, proveedores y
+clientes; compras con detalle; inventario (no se cierra una venta que deje stock negativo); cliente
+obligatorio para pago Debe; no se eliminan registros con datos asociados.
 
-## Ejecutar y publicar
+**Nuevas (MVP 3):**
 
-**No abras `index.html` con doble clic.** Al usar `file://`, Chrome bloquea `type="module"` y los botones quedan sin funciones.
+- **Autenticación JWT** con roles administrador y cajero, sesión persistente durante la pestaña,
+  renovación automática del token y cierre de sesión.
+- **Descuentos**: catálogo (porcentaje o valor fijo), uno por venta, sobre el total, sin totales negativos.
+- **Corrección de ventas cerradas**: conserva el número de venta, registra quién y cuándo, y ajusta el
+  inventario solo por la diferencia.
+- **Reembolsos** parciales o totales, proporcionales al descuento, con opción de devolver al inventario.
+- **Faltantes**: productos inexistentes o agotados, con filtros, resolución y vista agrupada para compras.
+- **Reportes**: ventas totales, productos más vendidos, compras y faltantes frecuentes por rango de fechas.
 
-### Ejecutar localmente desde VS Code
+### Permisos por rol
 
-1. Abre esta carpeta (`proyectoLibreria`) en VS Code.
-2. Abre Terminal → Nueva terminal y ejecuta `py -m http.server 5500`.
-3. En Chrome visita `http://localhost:5500`.
-4. Para parar el servidor, vuelve a la terminal y pulsa `Ctrl+C`.
+| Función | Administrador | Cajero |
+|---|:---:|:---:|
+| Ventas: crear, guardar, retomar y cerrar; historial y factura | ✔ | ✔ |
+| Aplicar un descuento existente | ✔ | ✔ |
+| Registrar y consultar faltantes | ✔ | ✔ |
+| Gestionar clientes | ✔ | ✔ |
+| Consultar productos, categorías y proveedores | ✔ | ✔ |
+| Editar un producto desde la venta (nombre, código, categoría, precio) | ✔ | ✔ |
+| Crear, editar y eliminar productos, categorías y proveedores | ✔ | — |
+| Compras | ✔ | — |
+| Catálogo de descuentos | ✔ | — |
+| Corregir ventas y reembolsar | ✔ | — |
+| Resolver faltantes y vista para compras | ✔ | — |
+| Reportes | ✔ | — |
 
-También puedes usar Live Server, pero abre la dirección `http://127.0.0.1:...` que muestra la extensión.
+Se aplican en dos niveles: el frontend oculta lo que el rol no puede usar y el backend rechaza con
+`403` cualquier petición no autorizada, aunque se llame la URL directamente.
 
-### Publicar con GitHub Pages
+### Reglas de negocio y decisiones
 
-1. Crea un repositorio de GitHub y sube **el contenido de esta carpeta** a su raíz; `index.html` debe quedar en la raíz del repositorio.
-2. En GitHub abre Settings → Pages.
-3. En “Build and deployment”, elige “Deploy from a branch”, selecciona la rama donde subiste los archivos y la carpeta `/ (root)`, y pulsa Save.
-4. Cuando GitHub Pages termine de publicar, abre `https://USUARIO.github.io/REPOSITORIO/`.
-5. En `js/api.js`, configura la URL `/exec` de Apps Script antes de subir los archivos.
+- **Los precios ya incluyen IVA.** `total = subtotal − descuento`. La factura informa el IVA contenido
+  en el total (19 %: `total − total / 1,19`); no se suma.
+- Cada línea de venta y compra guarda una copia del nombre, precio y costo del producto al momento de la
+  operación, así el historial no cambia si luego se edita el producto.
+- La venta guarda una copia del descuento aplicado: eliminar el descuento del catálogo no altera ventas pasadas.
+- Una venta abierta toma los precios actuales al guardarse o cerrarse (por eso la edición en caliente se
+  refleja en la venta en curso).
+- En una corrección, los productos que ya estaban conservan su precio original; los nuevos toman el actual.
+- Una venta con reembolsos ya no se puede corregir (primero se corrige, después se reembolsa).
+- Reembolsar todas las unidades devuelve exactamente el total pagado (el valor se reparte entre las líneas sin
+  errores de redondeo).
+- Cada compra actualiza el costo del producto con el último costo y suma stock a los productos con inventario.
+- Faltantes en texto se agrupan por nombre normalizado: minúsculas, sin tildes, espacios simples y plural
+  simple por palabra (`ces`→`z`, `es` tras consonante, `s` final; no se tocan palabras de menos de 5 letras
+  ni las terminadas en vocal tildada + s). Ej.: “Lápices de Colores” → “lapiz de color”.
 
-### Comprobar el backend
+La API completa (rutas, cuerpos JSON, respuestas y códigos de error) está en
+[`backend/API.md`](backend/API.md).
 
-GitHub Pages solo hospeda el frontend; las lecturas y escrituras requieren que Apps Script responda. Abre `https://script.google.com/macros/s/ID_DEL_DESPLIEGUE/exec?resource=productos`: debe mostrar JSON con `success` y `data`. Si muestra “Script function not found: doGet”, pega `apps-script/Code.gs` completo en el proyecto de Apps Script asociado a la hoja, guarda y vuelve a implementar una **nueva versión** de la aplicación web. En “Nueva implementación → Aplicación web”, configura “Ejecutar como: Yo” y “Quién tiene acceso: Cualquier persona” (si la cuenta/organización lo permite), acepta los permisos del propietario y publica. Después verifica el endpoint otra vez. Si se crea una nueva versión, actualiza la implementación existente y vuelve a publicar; la URL `/exec` normalmente se conserva.
+## 3. Instalación local (Windows)
 
-No se incluyen dependencias instaladas ni artefactos compilados.
+Requisitos: Python 3.12 o superior, PostgreSQL y Git.
 
+### 3.1 Base de datos
+
+Instala PostgreSQL y crea la base de datos (desde **SQL Shell (psql)**):
+
+```sql
+CREATE DATABASE pos_papel_luna;
+```
+
+### 3.2 Backend
+
+```powershell
+cd backend
+py -m venv env
+.\env\Scripts\Activate.ps1
+pip install -r requirements.txt
+copy .env.example .env
+notepad .env        # ajusta DATABASE_URL con tu usuario y contraseña de PostgreSQL
+python manage.py migrate
+python manage.py crear_usuarios_iniciales
+python manage.py cargar_datos_demo      # opcional: catálogo de ejemplo
+python manage.py runserver
+```
+
+La API queda en `http://127.0.0.1:8000/api/` y el panel de Django en `http://127.0.0.1:8000/admin/`.
+
+### 3.3 Frontend
+
+En otra terminal, desde la raíz del proyecto:
+
+```powershell
+py -m http.server 5500
+```
+
+Abre `http://localhost:5500`. No abras `index.html` con doble clic: el navegador bloquea los módulos
+JavaScript con `file://`.
+
+### 3.4 Variables de entorno (`backend/.env`)
+
+| Variable | Descripción |
+|---|---|
+| `DJANGO_DEBUG` | `True` en desarrollo, `False` en producción |
+| `DJANGO_SECRET_KEY` | Clave secreta (obligatoria en producción) |
+| `DJANGO_ALLOWED_HOSTS` | Dominios permitidos, separados por coma (Render se agrega solo) |
+| `DATABASE_URL` | `postgresql://usuario:clave@host:5432/base` |
+| `DB_SSL_REQUIRE` | `True` para bases en la nube (Neon) |
+| `CORS_ALLOWED_ORIGINS` | Orígenes del frontend, sin `/` final |
+| `JWT_ACCESS_MINUTES` / `JWT_REFRESH_HOURS` | Duración de los tokens (30 min / 8 h) |
+| `POS_IVA_PORCENTAJE` | IVA incluido en los precios (19) |
+| `POS_ADMIN_*`, `POS_CAJERO_*` | Usuarios iniciales |
+| `POS_CARGAR_DEMO` | `True` para cargar el catálogo de ejemplo en el build de Render |
+
+El archivo `.env` nunca se sube a Git.
+
+### 3.5 Scripts de base de datos e inicialización
+
+- **Esquema:** lo crean las migraciones de Django (`backend/apps/*/migrations/`) con `python manage.py migrate`.
+  El script `crear-zip.ps1` exporta el SQL equivalente a `backend/sql/esquema.sql`.
+- **Usuarios iniciales:** `python manage.py crear_usuarios_iniciales` (idempotente).
+- **Datos de ejemplo:** `python manage.py cargar_datos_demo` (idempotente).
+
+## 4. Pruebas
+
+### Automáticas (82 pruebas del backend)
+
+```powershell
+cd backend
+.\env\Scripts\Activate.ps1
+python manage.py test
+```
+
+Cubren autenticación, permisos por rol (incluido el acceso directo a endpoints de administrador),
+validaciones, protección de registros asociados, cálculo de totales con IVA incluido y descuentos,
+cierre de ventas, stock insuficiente, corrección con ajuste diferencial de inventario, reembolsos
+proporcionales, compras, faltantes, reportes y la consistencia ante un fallo a mitad de una transacción.
+
+### Manuales (lista de verificación)
+
+- [ ] Login incorrecto muestra error; login correcto entra con el rol indicado.
+- [ ] Al recargar la página la sesión se mantiene; “Cerrar sesión” vuelve al login.
+- [ ] Cajero: no ve Compras, Descuentos ni Reportes; no puede crear productos.
+- [ ] Venta en efectivo con cambio; venta Debe exige cliente; venta con descuento.
+- [ ] Guardar venta abierta, retomarla desde Ventas y cerrarla.
+- [ ] Intentar vender más unidades que el stock: se bloquea indicando el producto.
+- [ ] Factura: imprimir o guardar como PDF.
+- [ ] Admin: registrar compra y ver el stock actualizado.
+- [ ] Admin: corregir una venta (cambiar cantidades) y ver la marca “Corregida” en historial y factura.
+- [ ] Admin: reembolso parcial con y sin retorno al inventario; luego reembolso total.
+- [ ] Eliminar una categoría con productos: muestra que tiene registros asociados.
+- [ ] Registrar faltantes desde el punto de venta y verlos agrupados en “Para próximas compras”.
+- [ ] Reportes de hoy y de los últimos 7 días.
+- [ ] Recargar la página tras cada operación: los datos siguen ahí (persistencia en PostgreSQL).
+- [ ] Probar en el celular (menú horizontal, carrito debajo del catálogo).
+
+## 5. Despliegue
+
+Planes gratuitos usados (condiciones verificadas en noviembre de 2026):
+
+- **Neon** (PostgreSQL): sin vencimiento; 1 GB por proyecto y 100 horas de cómputo al mes; se suspende
+  tras 5 minutos sin uso y se reactiva sola.
+- **Render** (backend): el servicio se suspende tras 15 minutos sin tráfico y tarda cerca de un minuto
+  en despertar; 750 horas gratis al mes. Se descartó su PostgreSQL gratuita porque vence a los 30 días.
+- **GitHub Pages** (frontend).
+
+### 5.1 Base de datos en Neon
+
+1. Crea una cuenta en neon.com y un proyecto (región cercana, por ejemplo `AWS US East`).
+2. En **Connect**, desactiva *Connection pooling* y copia la cadena de conexión
+   (`postgresql://usuario:clave@ep-xxxx.us-east-1.aws.neon.tech/neondb?sslmode=require`).
+
+### 5.2 Backend en Render
+
+1. Sube el proyecto a GitHub (mismo repositorio de las entregas anteriores).
+2. En render.com: **New → Web Service**, conecta el repositorio y configura:
+   - **Root Directory:** `backend`
+   - **Runtime:** Python 3 (la versión se toma de `backend/.python-version`)
+   - **Build Command:** `bash build.sh`
+   - **Start Command:** `gunicorn config.wsgi:application`
+   - **Instance Type:** Free
+3. En **Environment** agrega:
+
+   | Variable | Valor |
+   |---|---|
+   | `DJANGO_DEBUG` | `False` |
+   | `DJANGO_SECRET_KEY` | una clave larga y aleatoria |
+   | `DATABASE_URL` | la cadena de Neon |
+   | `DB_SSL_REQUIRE` | `True` |
+   | `CORS_ALLOWED_ORIGINS` | `https://gabrielritedev-07.github.io` |
+   | `POS_CARGAR_DEMO` | `True` (opcional) |
+
+4. **Create Web Service**. El build aplica migraciones y crea los usuarios. Verifica
+   `https://NOMBRE-SERVICIO.onrender.com/api/salud/`.
+
+### 5.3 Frontend en GitHub Pages
+
+1. En `js/config.js` reemplaza `API_PRODUCCION` por `https://NOMBRE-SERVICIO.onrender.com/api/`.
+2. Haz commit y push.
+3. En GitHub: **Settings → Pages → Deploy from a branch**, rama `main`, carpeta `/ (root)`.
+4. Abre https://gabrielritedev-07.github.io/lopez-rios-sanabria-mvp2-web-2026-2/ e inicia sesión.
+
+## 6. Entrega
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\crear-zip.ps1
+```
+
+Genera `web-2026-2-mvp3-lopez-rios-sanabria.zip` sin `env`, `.venv`, `.git`, `__pycache__`,
+`node_modules`, `.env` ni bases de datos locales.
