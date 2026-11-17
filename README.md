@@ -5,8 +5,8 @@ Sistema de punto de venta para la papelería **Papel y Luna**. Desarrollo de Apl
 | | URL |
 |---|---|
 | **Frontend** | https://gabrielritedev-07.github.io/lopez-rios-sanabria-mvp2-web-2026-2/ |
-| **API (backend)** | `https://NOMBRE-SERVICIO.onrender.com/api/` ← *reemplazar tras crear el servicio en Render* |
-| Comprobación de la API | `https://NOMBRE-SERVICIO.onrender.com/api/salud/` |
+| **API (backend)** | `https://papel-luna-api.onrender.com/api/` |
+| Comprobación de la API | `https://papel-luna-api.onrender.com/api/salud/` |
 | Repositorio | https://github.com/gabrielritedev-07/lopez-rios-sanabria-mvp2-web-2026-2 |
 
 > El backend usa el plan gratuito de Render: tras 15 minutos sin uso se suspende y la primera
@@ -280,11 +280,11 @@ Planes gratuitos usados (condiciones verificadas en noviembre de 2026):
    | `POS_CARGAR_DEMO` | `True` (opcional) |
 
 4. **Create Web Service**. El build aplica migraciones y crea los usuarios. Verifica
-   `https://NOMBRE-SERVICIO.onrender.com/api/salud/`.
+   `https://papel-luna-api.onrender.com/api/salud/`.
 
 ### 5.3 Frontend en GitHub Pages
 
-1. En `js/config.js` reemplaza `API_PRODUCCION` por `https://NOMBRE-SERVICIO.onrender.com/api/`.
+1. En `js/config.js` reemplaza `API_PRODUCCION` por `https://papel-luna-api.onrender.com/api/`.
 2. Haz commit y push.
 3. En GitHub: **Settings → Pages → Deploy from a branch**, rama `main`, carpeta `/ (root)`.
 4. Abre https://gabrielritedev-07.github.io/lopez-rios-sanabria-mvp2-web-2026-2/ e inicia sesión.

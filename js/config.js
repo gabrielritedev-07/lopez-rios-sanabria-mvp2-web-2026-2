@@ -1,8 +1,8 @@
 // Configuración del frontend.
 // En desarrollo (localhost) usa el backend local de Django.
-// Al desplegar, cambia API_PRODUCCION por la URL pública del backend (Fase 6).
+// Al desplegar, API_PRODUCCION apunta al backend publicado en Render.
 const API_LOCAL = "http://127.0.0.1:8000/api/";
-const API_PRODUCCION = "https://CAMBIAR-POR-URL-DEL-BACKEND.onrender.com/api/";
+const API_PRODUCCION = "https://papel-luna-api.onrender.com/api/";
 
 const esLocal = ["localhost", "127.0.0.1", ""].includes(location.hostname);
 
