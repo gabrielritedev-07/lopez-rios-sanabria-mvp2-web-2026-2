@@ -4,10 +4,10 @@ Sistema de punto de venta para la papelería **Papel y Luna**. Desarrollo de Apl
 
 | | URL |
 |---|---|
-| **Frontend** | https://claudiosgproyectos-max.github.io/lopez-rios-sanabria-mvp2-web-2026-2/ |
+| **Frontend** | https://gabrielritedev-07.github.io/lopez-rios-sanabria-mvp2-web-2026-2/ |
 | **API (backend)** | `https://NOMBRE-SERVICIO.onrender.com/api/` ← *reemplazar tras crear el servicio en Render* |
 | Comprobación de la API | `https://NOMBRE-SERVICIO.onrender.com/api/salud/` |
-| Repositorio | https://github.com/claudiosgproyectos-max/lopez-rios-sanabria-mvp2-web-2026-2 |
+| Repositorio | https://github.com/gabrielritedev-07/lopez-rios-sanabria-mvp2-web-2026-2 |
 
 > El backend usa el plan gratuito de Render: tras 15 minutos sin uso se suspende y la primera
 > petición tarda cerca de un minuto en responder. Después funciona con normalidad.
@@ -276,7 +276,7 @@ Planes gratuitos usados (condiciones verificadas en noviembre de 2026):
    | `DJANGO_SECRET_KEY` | una clave larga y aleatoria |
    | `DATABASE_URL` | la cadena de Neon |
    | `DB_SSL_REQUIRE` | `True` |
-   | `CORS_ALLOWED_ORIGINS` | `https://claudiosgproyectos-max.github.io` |
+   | `CORS_ALLOWED_ORIGINS` | `https://gabrielritedev-07.github.io` |
    | `POS_CARGAR_DEMO` | `True` (opcional) |
 
 4. **Create Web Service**. El build aplica migraciones y crea los usuarios. Verifica
@@ -287,7 +287,7 @@ Planes gratuitos usados (condiciones verificadas en noviembre de 2026):
 1. En `js/config.js` reemplaza `API_PRODUCCION` por `https://NOMBRE-SERVICIO.onrender.com/api/`.
 2. Haz commit y push.
 3. En GitHub: **Settings → Pages → Deploy from a branch**, rama `main`, carpeta `/ (root)`.
-4. Abre https://claudiosgproyectos-max.github.io/lopez-rios-sanabria-mvp2-web-2026-2/ e inicia sesión.
+4. Abre https://gabrielritedev-07.github.io/lopez-rios-sanabria-mvp2-web-2026-2/ e inicia sesión.
 
 ## 6. Entrega
 

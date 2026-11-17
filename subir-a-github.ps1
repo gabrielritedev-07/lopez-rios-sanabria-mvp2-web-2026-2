@@ -9,7 +9,7 @@
 # 4. Verifica que estén las migraciones que Render necesita.
 # 5. Hace commit, integra lo que hayan subido tus compañeros y hace push a main.
 
-$repo = "https://github.com/claudiosgproyectos-max/lopez-rios-sanabria-mvp2-web-2026-2.git"
+$repo = "https://github.com/gabrielritedev-07/lopez-rios-sanabria-mvp2-web-2026-2.git"
 Set-Location $PSScriptRoot
 
 function Fallar($mensaje) {
@@ -116,4 +116,4 @@ if ($hayMainRemoto) {
 Ejecutar "Subiendo a GitHub" { git push -u origin main }
 
 Write-Host ""
-Write-Host "Listo. Revisa: https://github.com/claudiosgproyectos-max/lopez-rios-sanabria-mvp2-web-2026-2" -ForegroundColor Green
+Write-Host "Listo. Revisa: https://github.com/gabrielritedev-07/lopez-rios-sanabria-mvp2-web-2026-2" -ForegroundColor Green
